@@ -1,0 +1,84 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class Items extends CI_Controller {
+
+	public function index(){
+
+		$this->load->model('Item');
+		$products = $this->Item->get_all_products();
+
+		$viewdata = array(
+			"products"=>$products,
+			"cart"=>$this->session->userdata('cart'),
+			"info"=>$this->input->post()
+		);
+
+        $this->load->view('Catalog', $viewdata);
+	}
+
+	public function cart(){
+		$this->load->view('Cart');
+	}
+
+	public function confirmation(){
+		if(!empty($this->input->post())){
+            $this->load->library("form_validation");
+            $this->form_validation->set_rules("name", "Name", "trim|required|min_length[2]");
+			$this->form_validation->set_rules("address", "Last Name", "trim|required|min_length[2]");
+            $this->form_validation->set_rules("card_number", "Card Number", "trim|required|exact_length[16]|numeric|is_unique[user.card_number]");
+            if($this->form_validation->run() === FALSE)
+            {
+                $this->view_data["errors"] = validation_errors();
+                $errors =  validation_errors();
+				$this->session->set_flashdata("errors", $errors);
+				redirect('/items/cart');
+            }
+            else
+            {
+                //codes to run on success validation here
+                $info =  $this->input->post();
+                $this->load->model('Item');
+                $user_details = array(
+                    "name" => $info['name'],
+					"address"=>$info['address'],
+                    "card" => $info['card_number']
+                ); //or you can adjust this as non-array
+				if($this->form_validation->run() === TRUE)
+				{
+					$success = 'Registration Completed';
+					$this->session->set_flashdata("success", $success);
+				}
+                $this->Item->add_user($user_details);
+				redirect('/items/cart');
+           }
+        }
+	}
+
+	public function buy(){
+		$this->load->model('Item');
+		$products = $this->Item->get_all_products();
+		$data = $this->input->post();
+		foreach($data as $key=>$value){
+			if($this->input->post('click') ){
+				if(!empty($this->session->userdata('cart'))){
+					$cart = $this->session->userdata('cart');
+					$cart+=$value;
+					$this->session->set_userdata('cart', $cart);
+
+				}
+				else
+				{
+					$this->session->set_userdata('cart', $value);
+					$cart = $this->session->userdata('cart');
+				}
+				$cart--;
+			}
+		}
+
+		redirect('/');
+
+	}
+}
+
+?>
